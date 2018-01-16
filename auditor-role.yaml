@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template performs actions to set up Security Operations on an AWS account. Role for audit, CloudTrail config.
+
+Parameters:
+    UserARNS:
+        Type: CommaDelimitedList
+        Default: "arn1,arn2,arn3"
+        Description: "Provide a comma delimited list of ARNs for users that you want to assume the role. (arn:aws:iam::123456789012:user/testuser)"
+    RetentionInDays:
+        Type: String
+        Default: "365"
+        Description: "The number of days that the Logs from CloudTrail will be retained in CloudWatch Logs"
+    pS3BucketName:
+        Type: "String"
+        Description: "Name of the S3 bucket where you want CloudTrail logging delivered"
+    pS3KeyPrefix:
+        Type: "String"
+        Description: "Prefix for objects placed in the bucket - use the account number for shared log buckets"
+
+
+Resources:
+    SecurityAuditRole:
+        Type: "AWS::IAM::Role"
+        Properties: 
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - 
+                Effect: "Allow"
+                Principal: 
+                    AWS: !Ref UserARNS
+                Action: 
+                  - "sts:AssumeRole"
+          Path: "/"
+          RoleName: "SecurityTeamAudit"
+          ManagedPolicyArns:
+            - arn:aws:iam::aws:policy/SecurityAudit
+          Policies:
+            -
+                PolicyName: "SecurityAudit-CWL"
+                PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                        -
+                            Action: "logs:*"
+                            Effect: "Allow"
+                            Resource: "*"
+
+    CloudTrail:
+        Type: "AWS::CloudTrail::Trail"
+        IsLogging: true
+        S3BucketName: !Ref pS3BucketName
+        S3KeyPrefix: !Ref pS3KeyPrefix
+        TrailName: "SecurityTeamOps-Trail"
+
