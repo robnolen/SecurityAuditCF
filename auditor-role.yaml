@@ -48,8 +48,9 @@ Resources:
 
     CloudTrail:
         Type: "AWS::CloudTrail::Trail"
-        IsLogging: true
-        S3BucketName: !Ref pS3BucketName
-        S3KeyPrefix: !Ref pS3KeyPrefix
-        TrailName: "SecurityTeamOps-Trail"
+        Properties:
+            IsLogging: true
+            S3BucketName: !Ref pS3BucketName
+            S3KeyPrefix: !Ref pS3KeyPrefix
+            TrailName: "SecurityTeamOps-Trail"
 
