@@ -10,13 +10,6 @@ Parameters:
         Type: String
         Default: "365"
         Description: "The number of days that the Logs from CloudTrail will be retained in CloudWatch Logs"
-    pS3BucketName:
-        Type: "String"
-        Description: "Name of the S3 bucket where you want CloudTrail logging delivered"
-    pS3KeyPrefix:
-        Type: "String"
-        Description: "Prefix for objects placed in the bucket - use the account number for shared log buckets"
-
 
 Resources:
     SecurityAuditRole:
@@ -45,12 +38,49 @@ Resources:
                             Action: "logs:*"
                             Effect: "Allow"
                             Resource: "*"
+    S3Bucket:
+        Type: "AWS::S3::Bucket"
+        DeletionPolicy: Retain 
+        Properties: {}
+    
+    BucketPolicy:
+        DependsOn: S3Bucket
+        Type: "AWS::S3::BucketPolicy"
+        Properties:
+            Bucket: !Ref S3Bucket
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement: 
+                    - 
+                      Sid: "AWSCloudTrailAclCheck"
+                      Effect: "Allow"
+                      Principal: 
+                        Service: "cloudtrail.amazonaws.com"
+                      Action: "s3:GetBucketAcl"
+                      Resource: 
+                        !Sub |-
+                          arn:aws:s3:::${S3Bucket}
+                    - 
+                      Sid: "AWSCloudTrailWrite"
+                      Effect: "Allow"
+                      Principal: 
+                        Service: "cloudtrail.amazonaws.com"
+                      Action: "s3:PutObject"
+                      Resource:
+                        !Sub |-
+                          arn:aws:s3:::${S3Bucket}/AWSLogs/${AWS::AccountId}/*
+                      Condition: 
+                        StringEquals:
+                          s3:x-amz-acl: "bucket-owner-full-control"
+
 
     CloudTrail:
+        DependsOn: 
+            - BucketPolicy
+            - S3Bucket
         Type: "AWS::CloudTrail::Trail"
         Properties:
             IsLogging: true
-            S3BucketName: !Ref pS3BucketName
-            S3KeyPrefix: !Ref pS3KeyPrefix
+            S3BucketName: !Ref S3Bucket
             TrailName: "SecurityTeamOps-Trail"
 
